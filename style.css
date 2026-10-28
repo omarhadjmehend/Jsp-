@@ -1,0 +1,82 @@
+:root {
+  --fond: #f7f7fb;
+  --texte: #1f2330;
+  --doux: #5b6275;
+  --accent: #4f46e5;
+  --carte: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fond: #14161f;
+    --texte: #eceef5;
+    --doux: #a3a9bb;
+    --accent: #818cf8;
+    --carte: #1e2130;
+  }
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--fond);
+  color: var(--texte);
+  line-height: 1.6;
+}
+
+nav {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+nav ul { list-style: none; display: flex; gap: 1rem; }
+nav a { color: var(--texte); text-decoration: none; }
+nav a:hover { color: var(--accent); }
+.logo { font-weight: 700; font-size: 1.2rem; }
+
+main { max-width: 960px; margin: 0 auto; padding: 0 1rem; }
+
+section { padding: 3rem 0; }
+h2 { margin-bottom: 1rem; }
+p { color: var(--doux); }
+
+.hero { text-align: center; padding: 5rem 0; }
+.hero h1 { font-size: clamp(2rem, 6vw, 3.5rem); margin-bottom: 1rem; }
+.hero p { font-size: 1.15rem; margin-bottom: 2rem; }
+
+.bouton {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+}
+.bouton:hover { opacity: 0.9; }
+
+.cartes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+.carte {
+  background: var(--carte);
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+.carte h3 { margin-bottom: 0.5rem; }
+
+#contact a { color: var(--accent); }
+
+footer { text-align: center; padding: 2rem 1rem; color: var(--doux); }
