@@ -80,3 +80,4 @@ p { color: var(--doux); }
 #contact a { color: var(--accent); }
 
 footer { text-align: center; padding: 2rem 1rem; color: var(--doux); }
+.carte h3 a { color: var(--accent); text-decoration: none; }

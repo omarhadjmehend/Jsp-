@@ -1,0 +1,1653 @@
+<title>Simulateur INAMI optique</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap">
+<style>
+/* Mise en page : fiche de comptoir en deux colonnes (saisie | résultat), une seule colonne sur téléphone */
+:root {
+  --bg: #eef3f4;
+  --surface: #ffffff;
+  --ink: #12232a;
+  --muted: #56686f;
+  --line: #cfdadd;
+  --accent: #0b6f7a;
+  --accent-soft: #dcefef;
+  --ok: #1f7a46;
+  --ok-soft: #e1f2e7;
+  --no: #a5432b;
+  --no-soft: #f7e6e1;
+  --warn: #8a6100;
+  --warn-soft: #fbf0d6;
+  --font-display: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1a1e; --surface: #16252b; --ink: #e5eff1; --muted: #9db0b6; --line: #2a3e45;
+    --accent: #5cc3cc; --accent-soft: #173a3f; --ok: #6fd39a; --ok-soft: #173326;
+    --no: #f09a82; --no-soft: #3a211b; --warn: #e8c26a; --warn-soft: #362c14;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1a1e; --surface: #16252b; --ink: #e5eff1; --muted: #9db0b6; --line: #2a3e45;
+  --accent: #5cc3cc; --accent-soft: #173a3f; --ok: #6fd39a; --ok-soft: #173326;
+  --no: #f09a82; --no-soft: #3a211b; --warn: #e8c26a; --warn-soft: #362c14;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 40px;
+}
+.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 20px; }
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: 1.9rem; line-height: 1.05; margin: 0; text-wrap: balance; letter-spacing: 0.01em; }
+.sub { color: var(--muted); margin: 4px 0 0; max-width: 60ch; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+button { font: inherit; cursor: pointer; }
+.btn { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 8px 14px; font-weight: 700; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.btn:focus-visible, input:focus-visible, select:focus-visible, .seg label:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
+.layout { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 820px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+form { display: grid; gap: 14px; }
+fieldset { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); margin: 0; padding: 14px 14px 16px; display: grid; gap: 12px; min-width: 0; }
+legend { font-family: var(--font-display); font-weight: 600; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); padding: 0 6px; }
+.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field > span { font-size: 0.85rem; color: var(--muted); }
+input[type="date"], input[type="number"], select {
+  width: 100%; font: inherit; color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 7px; padding: 8px 10px; min-height: 40px;
+  font-variant-numeric: tabular-nums;
+}
+.check { display: flex; gap: 10px; align-items: flex-start; }
+.check input { width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--accent); flex: none; }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg label { flex: 1; text-align: center; padding: 9px 6px; cursor: pointer; background: var(--bg); border-right: 1px solid var(--line); font-weight: 700; font-size: 0.92rem; }
+.seg label:last-child { border-right: 0; }
+.seg.lang label { padding: 7px 12px; flex: none; }
+.mutname { margin: 0; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label:has(input:checked) { background: var(--accent); color: var(--surface); }
+.rx { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.rx th { font-family: var(--font-display); font-weight: 600; text-align: left; font-size: 0.85rem; color: var(--muted); padding: 0 6px 4px 0; }
+.rx td { padding: 3px 6px 3px 0; }
+.rx td:first-child { font-family: var(--font-display); font-weight: 700; width: 3.2em; }
+.hint { font-size: 0.82rem; color: var(--muted); margin: 0; }
+
+.result { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); display: grid; gap: 14px; }
+@media (max-width: 820px) { .result { position: static; } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.panel h2 { font-family: var(--font-display); font-weight: 600; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin: 0; }
+.total { display: grid; gap: 2px; }
+.total .label { color: var(--muted); font-size: 0.9rem; }
+.total .big { font-family: var(--font-display); font-weight: 700; font-size: 2.6rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.lines { display: grid; gap: 6px; margin: 0; }
+.lines div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px dashed var(--line); padding-bottom: 6px; }
+.lines div:last-child { border-bottom: 0; padding-bottom: 0; }
+.lines dt { color: var(--muted); min-width: 0; }
+.lines dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lines .sum dt, .lines .sum dd { color: var(--ink); font-weight: 700; }
+.eyes { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.eye { border-radius: 8px; padding: 10px 12px; display: grid; gap: 4px; min-width: 0; }
+.eye.ok { background: var(--ok-soft); }
+.eye.no { background: var(--no-soft); }
+.eye .tag { font-family: var(--font-display); font-weight: 700; font-size: 0.95rem; }
+.eye.ok .tag { color: var(--ok); }
+.eye.no .tag { color: var(--no); }
+.eye p { margin: 0; font-size: 0.88rem; }
+.scen { border-left: 3px solid var(--accent); padding-left: 10px; display: grid; gap: 2px; }
+.scen strong { font-variant-numeric: tabular-nums; }
+.scen small { color: var(--muted); }
+.pill { display: inline-block; font-size: 0.75rem; font-weight: 700; border-radius: 999px; padding: 2px 8px; background: var(--accent-soft); color: var(--accent); }
+.pill.verify { background: var(--warn-soft); color: var(--warn); }
+.warn { background: var(--warn-soft); color: var(--ink); border-radius: 8px; padding: 10px 12px; font-size: 0.88rem; display: grid; gap: 6px; }
+.warn p { margin: 0; }
+ul.docs { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; font-size: 0.9rem; }
+.disclaimer { font-size: 0.8rem; color: var(--muted); margin: 0; }
+.example-flag { font-size: 0.78rem; font-weight: 700; color: var(--warn); background: var(--warn-soft); border-radius: 999px; padding: 3px 10px; }
+a { color: var(--accent); }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1 data-i18n="titre">Simulateur INAMI optique</h1>
+      <p class="sub" data-i18n="sous">Remboursement INAMI et mutualité d'une paire de lunettes, calculé au comptoir. Rien n'est enregistré.</p>
+    </div>
+    <div class="actions">
+      <div class="seg lang" role="radiogroup" aria-label="Langue / Taal"><label><input type="radio" name="lang" id="langFr" value="fr" checked>FR</label><label><input type="radio" name="lang" id="langNl" value="nl">NL</label></div>
+      <span class="example-flag" id="exampleFlag" data-i18n="exemple">Dossier d'exemple</span>
+      <button type="button" class="btn" id="btnExemple" data-i18n="btnExemple">Exemple</button>
+      <button type="button" class="btn primary" id="btnReset" data-i18n="btnReset">Nouveau client</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <form id="form" autocomplete="off">
+      <fieldset>
+        <legend data-i18n="lgClient">Client</legend>
+        <div class="row">
+          <label class="field"><span data-i18n="naissance">Date de naissance</span><input type="date" id="dateNaissance" required></label>
+          <label class="field"><span data-i18n="delivrance">Date de délivrance</span><input type="date" id="dateDelivrance" required></label>
+        </div>
+        <div class="row">
+          <label class="check"><input type="checkbox" id="bim"><span data-i18n="bim">Statut BIM (intervention majorée)</span></label>
+          <label class="check"><input type="checkbox" id="conventionne" checked><span data-i18n="conv">Opticien conventionné</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend data-i18n="lgCorrection">Correction de loin</legend>
+        <div class="seg" role="radiogroup" aria-label="Type de verre">
+          <label><input type="radio" name="typeVerre" id="tvUni" value="unifocal" checked><span data-i18n="uni">Unifocal</span></label>
+          <label><input type="radio" name="typeVerre" id="tvBi" value="bifocal"><span data-i18n="bi">Bifocal</span></label>
+          <label><input type="radio" name="typeVerre" id="tvProg" value="progressif"><span data-i18n="prog">Progressif</span></label>
+        </div>
+        <div class="row">
+          <label class="field"><span data-i18n="materiau">Matériau</span>
+            <select id="materiau"><option value="" data-i18n="nsp">Je ne sais pas</option><option value="organique" data-i18n="organique">Organique</option><option value="mineral" data-i18n="mineral">Minéral</option></select></label>
+          <label class="field"><span data-i18n="indice">Indice</span>
+            <select id="indice"><option value="" data-i18n="nsp2">Je ne sais pas</option><option value="1.5">1,50</option><option value="1.53">1,53</option><option value="1.56">1,56</option><option value="1.6">1,60</option><option value="1.67">1,67</option><option value="1.7">1,70</option><option value="1.74">1,74</option><option value="1.8">1,80</option><option value="1.9">1,90</option></select></label>
+        </div>
+        <table class="rx">
+          <thead><tr><th></th><th data-i18n="sph">Sphère</th><th data-i18n="cyl">Cylindre</th></tr></thead>
+          <tbody>
+            <tr><td>OD</td>
+              <td><input type="number" id="odSph" step="0.25" min="-30" max="30" inputmode="decimal" aria-label="Sphère œil droit"></td>
+              <td><input type="number" id="odCyl" step="0.25" min="-10" max="10" inputmode="decimal" aria-label="Cylindre œil droit"></td></tr>
+            <tr><td>OG</td>
+              <td><input type="number" id="ogSph" step="0.25" min="-30" max="30" inputmode="decimal" aria-label="Sphère œil gauche"></td>
+              <td><input type="number" id="ogCyl" step="0.25" min="-10" max="10" inputmode="decimal" aria-label="Cylindre œil gauche"></td></tr>
+          </tbody>
+        </table>
+        <p class="hint" data-i18n="hintRx">Laisse une ligne vide pour un seul verre. Bifocal et progressif : valeurs de loin.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend data-i18n="lgPrescription">Prescription et renouvellement</legend>
+        <label class="check"><input type="checkbox" id="prescriptionOphtalmo" checked><span data-i18n="presc">Prescription d'un ophtalmologue (annexe 15bis)</span></label>
+        <div class="row">
+          <label class="field"><span data-i18n="datePresc">Date de la prescription</span><input type="date" id="datePrescription"></label>
+          <label class="field"><span data-i18n="dernierePaire">Dernière paire remboursée (si connue)</span><input type="date" id="derniereDelivrance"></label>
+        </div>
+        <label class="check"><input type="checkbox" id="changement05"><span data-i18n="changement">Correction changée d'au moins 0,5 D depuis</span></label>
+      </fieldset>
+
+      <fieldset>
+        <legend data-i18n="lgMut">Mutualité</legend>
+        <label class="field"><span data-i18n="mutClient">Mutualité du client</span><select id="mutualiteId"></select></label>
+        <div class="row">
+          <label class="field"><span data-i18n="dernierAvantage">Dernier avantage optique reçu (si connu)</span><input type="date" id="dernierAvantage"></label>
+        </div>
+        <label class="check" id="partenaireRow" hidden><input type="checkbox" id="achatPartenaire"><span id="partenaireLabel">Achat chez le magasin partenaire</span></label>
+      </fieldset>
+
+      <fieldset>
+        <legend data-i18n="lgPrix">Prix et monture</legend>
+        <div class="row">
+          <label class="field"><span data-i18n="prixVerres">Prix des verres (€)</span><input type="number" id="prixVerres" min="0" step="1" inputmode="decimal"></label>
+          <label class="field"><span data-i18n="prixMonture">Prix de la monture (€)</span><input type="number" id="prixMonture" min="0" step="1" inputmode="decimal"></label>
+        </div>
+        <div class="row">
+          <label class="check"><input type="checkbox" id="avecMonture" checked><span data-i18n="nouvelleMonture">Nouvelle monture</span></label>
+          <label class="field"><span data-i18n="montures">Montures déjà remboursées (moins de 18 ans)</span>
+            <select id="montureInterventions"><option value="0">0</option><option value="1">1</option><option value="2">2</option></select></label>
+        </div>
+      </fieldset>
+    </form>
+
+    <aside class="result" aria-live="polite">
+      <section class="panel">
+        <h2 data-i18n="hReste">Reste à payer</h2>
+        <div id="totaux"></div>
+      </section>
+      <section class="panel">
+        <h2 data-i18n="hVerres">Verres</h2>
+        <div class="eyes" id="yeux"></div>
+      </section>
+      <section class="panel">
+        <h2 data-i18n="hDetail">Détail du remboursement</h2>
+        <dl class="lines" id="detail"></dl>
+        <div id="mutualite"></div>
+      </section>
+      <div class="warn" id="avertissements" hidden></div>
+      <section class="panel">
+        <h2 data-i18n="hDocs">Documents à remettre</h2>
+        <ul class="docs" id="documents"></ul>
+        <p class="disclaimer" id="disclaimer"></p>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<script>
+const INAMI = {
+  "version": "2026-01-01",
+  "source": "https://www.inami.fgov.be/SiteCollectionDocuments/tarif_opticiens_20260101.pdf",
+  "verified_on": "2026-10-27",
+  "note": "Tarifs opticiens non indexés au 01/01/2026 (décision du 06/11/2025) : montants identiques à 2025, recalculés en points Z × coefficient. honoraire = remboursement chez un opticien conventionné ou pour un patient BIM ; reduit = colonne à 75 % (opticien non conventionné, patient non BIM). Hors simulateur : verres lenticulaires, filtres médicaux, prismes.",
+  "seuils": {
+    "tous_ages": 6.0,
+    "enfant_max": 5.75,
+    "senior_min": 4.25,
+    "senior_max": 5.75,
+    "age_enfant_max": 18,
+    "age_senior_min": 65
+  },
+  "renouvellement": {
+    "mois_enfant": 24,
+    "mois_adulte": 60,
+    "changement_min_dioptrie": 0.5
+  },
+  "prescription_validite_mois": 6,
+  "supplement_cylindre": {
+    "seuil": 6.0,
+    "par_categorie": {
+      "1": {
+        "code": "741635",
+        "honoraire": 95.92,
+        "reduit": 71.94
+      },
+      "2": {
+        "code": "741996",
+        "honoraire": 26.68,
+        "reduit": 20.01
+      },
+      "3": {
+        "code": "742276",
+        "honoraire": 26.35,
+        "reduit": 19.77
+      }
+    }
+  },
+  "monture_enfant": {
+    "code": "742711",
+    "honoraire": 29.51,
+    "reduit": 22.14,
+    "max_interventions": 2,
+    "premiere_avec_verre": true
+  },
+  "reduction_non_conventionne": {
+    "taux": 0.25,
+    "exception_bim": true,
+    "a_confirmer": false,
+    "note": "Appliquée en pratique (affiche INAMI pour opticiens non conventionnés, page CM) : la colonne non conventionné du tarif vaut 75 % du montant, sauf patient BIM."
+  },
+  "indice_eleve": {
+    "organique": 1.6,
+    "mineral": 1.7,
+    "mineral_bifocal_65": 1.6
+  },
+  "enfant_indice_eleve_min_dioptrie": 3.75,
+  "codes": [
+    {
+      "code": "741016",
+      "categorie": 1,
+      "type": "unifocal",
+      "materiau": "mineral",
+      "indice": "bas",
+      "cyl": [
+        0,
+        0
+      ],
+      "honoraire": 82.22,
+      "reduit": 61.67
+    },
+    {
+      "code": "741031",
+      "categorie": 1,
+      "type": "unifocal",
+      "materiau": "mineral",
+      "indice": "bas",
+      "cyl": [
+        0.25,
+        6
+      ],
+      "honoraire": 82.22,
+      "reduit": 61.67
+    },
+    {
+      "code": "741053",
+      "categorie": 1,
+      "type": "unifocal",
+      "materiau": "organique",
+      "indice": "bas",
+      "cyl": [
+        0,
+        0
+      ],
+      "honoraire": 86.43,
+      "reduit": 64.83
+    },
+    {
+      "code": "741075",
+      "categorie": 1,
+      "type": "unifocal",
+      "materiau": "organique",
+      "indice": "bas",
+      "cyl": [
+        0.25,
+        6
+      ],
+      "honoraire": 86.43,
+      "reduit": 64.83
+    },
+    {
+      "code": "741090",
+      "categorie": 1,
+      "type": "unifocal",
+      "materiau": "mineral",
+      "indice": "haut",
+      "cyl": [
+        0,
+        0
+      ],
+      "honoraire": 134.92,
+      "reduit": 101.19
+    },
+    {
+      "code": "741112",
+      "categorie": 1,
+      "type": "unifocal",
+      "materiau": "mineral",
+      "indice": "haut",
+      "cyl": [
+        0.25,
+        6
+      ],
+      "honoraire": 134.92,
+      "reduit": 101.19
+    },
+    {
+      "code": "741134",
+      "categorie": 1,
+      "type": "unifocal",
+      "materiau": "organique",
+      "indice": "haut",
+      "cyl": [
+        0,
+        0
+      ],
+      "honoraire": 114.89,
+      "reduit": 86.17
+    },
+    {
+      "code": "741156",
+      "categorie": 1,
+      "type": "unifocal",
+      "materiau": "organique",
+      "indice": "haut",
+      "cyl": [
+        0.25,
+        6
+      ],
+      "honoraire": 114.89,
+      "reduit": 86.17
+    },
+    {
+      "code": "741252",
+      "categorie": 1,
+      "type": "bifocal",
+      "materiau": "mineral",
+      "indice": "tous",
+      "cyl": [
+        0,
+        0
+      ],
+      "honoraire": 158.11,
+      "reduit": 118.59
+    },
+    {
+      "code": "741274",
+      "categorie": 1,
+      "type": "bifocal",
+      "materiau": "mineral",
+      "indice": "tous",
+      "cyl": [
+        0.25,
+        6
+      ],
+      "honoraire": 158.11,
+      "reduit": 118.59
+    },
+    {
+      "code": "741296",
+      "categorie": 1,
+      "type": "bifocal",
+      "materiau": "organique",
+      "indice": "bas",
+      "cyl": [
+        0,
+        0
+      ],
+      "honoraire": 143.35,
+      "reduit": 107.52
+    },
+    {
+      "code": "741311",
+      "categorie": 1,
+      "type": "bifocal",
+      "materiau": "organique",
+      "indice": "bas",
+      "cyl": [
+        0.25,
+        6
+      ],
+      "honoraire": 162.33,
+      "reduit": 121.75
+    },
+    {
+      "code": "741333",
+      "categorie": 1,
+      "type": "bifocal",
+      "materiau": "organique",
+      "indice": "haut",
+      "cyl": [
+        0,
+        0
+      ],
+      "honoraire": 174.98,
+      "reduit": 131.24
+    },
+    {
+      "code": "741355",
+      "categorie": 1,
+      "type": "bifocal",
+      "materiau": "organique",
+      "indice": "haut",
+      "cyl": [
+        0.25,
+        4
+      ],
+      "honoraire": 204.49,
+      "reduit": 153.37
+    },
+    {
+      "code": "741370",
+      "categorie": 1,
+      "type": "bifocal",
+      "materiau": "organique",
+      "indice": "haut",
+      "cyl": [
+        4.25,
+        6
+      ],
+      "honoraire": 237.17,
+      "reduit": 177.88
+    },
+    {
+      "code": "741473",
+      "categorie": 1,
+      "type": "progressif",
+      "materiau": "mineral",
+      "indice": "bas",
+      "cyl": [
+        0,
+        0
+      ],
+      "honoraire": 217.14,
+      "reduit": 162.86
+    },
+    {
+      "code": "741495",
+      "categorie": 1,
+      "type": "progressif",
+      "materiau": "mineral",
+      "indice": "bas",
+      "cyl": [
+        0.25,
+        6
+      ],
+      "honoraire": 217.14,
+      "reduit": 162.86
+    },
+    {
+      "code": "741510",
+      "categorie": 1,
+      "type": "progressif",
+      "materiau": "organique",
+      "indice": "bas",
+      "cyl": [
+        0,
+        0
+      ],
+      "honoraire": 216.08,
+      "reduit": 162.06
+    },
+    {
+      "code": "741532",
+      "categorie": 1,
+      "type": "progressif",
+      "materiau": "organique",
+      "indice": "bas",
+      "cyl": [
+        0.25,
+        6
+      ],
+      "honoraire": 235.06,
+      "reduit": 176.3
+    },
+    {
+      "code": "741554",
+      "categorie": 1,
+      "type": "progressif",
+      "materiau": "mineral",
+      "indice": "haut",
+      "cyl": [
+        0,
+        0
+      ],
+      "honoraire": 221.35,
+      "reduit": 166.02
+    },
+    {
+      "code": "741576",
+      "categorie": 1,
+      "type": "progressif",
+      "materiau": "mineral",
+      "indice": "haut",
+      "cyl": [
+        0.25,
+        6
+      ],
+      "honoraire": 247.71,
+      "reduit": 185.79
+    },
+    {
+      "code": "741591",
+      "categorie": 1,
+      "type": "progressif",
+      "materiau": "organique",
+      "indice": "haut",
+      "cyl": [
+        0,
+        0
+      ],
+      "honoraire": 307.79,
+      "reduit": 230.85
+    },
+    {
+      "code": "741613",
+      "categorie": 1,
+      "type": "progressif",
+      "materiau": "organique",
+      "indice": "haut",
+      "cyl": [
+        0.25,
+        6
+      ],
+      "honoraire": 332.03,
+      "reduit": 249.03
+    },
+    {
+      "code": "741694",
+      "categorie": 2,
+      "type": "unifocal",
+      "materiau": "organique",
+      "indice": "tous",
+      "cyl": [
+        0,
+        0
+      ],
+      "honoraire": 45.88,
+      "reduit": 34.41
+    },
+    {
+      "code": "741716",
+      "categorie": 2,
+      "type": "unifocal",
+      "materiau": "organique",
+      "indice": "tous",
+      "cyl": [
+        0.25,
+        3
+      ],
+      "honoraire": 45.88,
+      "reduit": 34.41
+    },
+    {
+      "code": "741731",
+      "categorie": 2,
+      "type": "unifocal",
+      "materiau": "organique",
+      "indice": "tous",
+      "cyl": [
+        3.25,
+        6
+      ],
+      "honoraire": 64.02,
+      "reduit": 48.02
+    },
+    {
+      "code": "743514 / 741753",
+      "categorie": 2,
+      "type": "unifocal",
+      "materiau": "organique",
+      "indice": "haut",
+      "cyl": [
+        0,
+        0
+      ],
+      "honoraire": 116.3,
+      "reduit": 87.23
+    },
+    {
+      "code": "743536 / 741775",
+      "categorie": 2,
+      "type": "unifocal",
+      "materiau": "organique",
+      "indice": "haut",
+      "cyl": [
+        0.25,
+        6
+      ],
+      "honoraire": 116.3,
+      "reduit": 87.23
+    },
+    {
+      "code": "741790",
+      "categorie": 2,
+      "type": "bifocal",
+      "materiau": "organique",
+      "indice": "tous",
+      "cyl": [
+        0,
+        0
+      ],
+      "honoraire": 126.97,
+      "reduit": 95.23
+    },
+    {
+      "code": "741812",
+      "categorie": 2,
+      "type": "bifocal",
+      "materiau": "organique",
+      "indice": "tous",
+      "cyl": [
+        0.25,
+        3
+      ],
+      "honoraire": 126.97,
+      "reduit": 95.23
+    },
+    {
+      "code": "741834",
+      "categorie": 2,
+      "type": "bifocal",
+      "materiau": "organique",
+      "indice": "tous",
+      "cyl": [
+        3.25,
+        6
+      ],
+      "honoraire": 142.98,
+      "reduit": 107.24
+    },
+    {
+      "code": "743551 / 741856",
+      "categorie": 2,
+      "type": "bifocal",
+      "materiau": "organique",
+      "indice": "haut",
+      "cyl": [
+        0,
+        0
+      ],
+      "honoraire": 147.25,
+      "reduit": 110.44
+    },
+    {
+      "code": "743573 / 741871",
+      "categorie": 2,
+      "type": "bifocal",
+      "materiau": "organique",
+      "indice": "haut",
+      "cyl": [
+        0.25,
+        3
+      ],
+      "honoraire": 162.19,
+      "reduit": 121.65
+    },
+    {
+      "code": "743595 / 741893",
+      "categorie": 2,
+      "type": "bifocal",
+      "materiau": "organique",
+      "indice": "haut",
+      "cyl": [
+        3.25,
+        6
+      ],
+      "honoraire": 183.53,
+      "reduit": 137.65
+    },
+    {
+      "code": "741915",
+      "categorie": 2,
+      "type": "progressif",
+      "materiau": "organique",
+      "indice": "tous",
+      "cyl": [
+        0,
+        0
+      ],
+      "honoraire": 197.4,
+      "reduit": 148.05
+    },
+    {
+      "code": "741930",
+      "categorie": 2,
+      "type": "progressif",
+      "materiau": "organique",
+      "indice": "tous",
+      "cyl": [
+        0.25,
+        6
+      ],
+      "honoraire": 218.74,
+      "reduit": 164.06
+    },
+    {
+      "code": "743610 / 741952",
+      "categorie": 2,
+      "type": "progressif",
+      "materiau": "organique",
+      "indice": "haut",
+      "cyl": [
+        0,
+        0
+      ],
+      "honoraire": 311.57,
+      "reduit": 233.68
+    },
+    {
+      "code": "743632 / 741974",
+      "categorie": 2,
+      "type": "progressif",
+      "materiau": "organique",
+      "indice": "haut",
+      "cyl": [
+        0.25,
+        6
+      ],
+      "honoraire": 336.11,
+      "reduit": 252.09
+    },
+    {
+      "code": "742070",
+      "categorie": 3,
+      "type": "bifocal",
+      "materiau": "mineral",
+      "indice": "haut",
+      "cyl": [
+        0,
+        0
+      ],
+      "honoraire": 94.87,
+      "reduit": 71.16
+    },
+    {
+      "code": "742092",
+      "categorie": 3,
+      "type": "bifocal",
+      "materiau": "mineral",
+      "indice": "haut",
+      "cyl": [
+        0.25,
+        4
+      ],
+      "honoraire": 117.0,
+      "reduit": 87.75
+    },
+    {
+      "code": "742114",
+      "categorie": 3,
+      "type": "bifocal",
+      "materiau": "mineral",
+      "indice": "haut",
+      "cyl": [
+        4.25,
+        6
+      ],
+      "honoraire": 140.19,
+      "reduit": 105.15
+    },
+    {
+      "code": "742136",
+      "categorie": 3,
+      "type": "bifocal",
+      "materiau": "organique",
+      "indice": "haut",
+      "cyl": [
+        0,
+        0
+      ],
+      "honoraire": 145.46,
+      "reduit": 109.1
+    },
+    {
+      "code": "742151",
+      "categorie": 3,
+      "type": "bifocal",
+      "materiau": "organique",
+      "indice": "haut",
+      "cyl": [
+        0.25,
+        4
+      ],
+      "honoraire": 160.22,
+      "reduit": 120.17
+    },
+    {
+      "code": "742173",
+      "categorie": 3,
+      "type": "bifocal",
+      "materiau": "organique",
+      "indice": "haut",
+      "cyl": [
+        4.25,
+        6
+      ],
+      "honoraire": 181.3,
+      "reduit": 135.98
+    },
+    {
+      "code": "742195",
+      "categorie": 3,
+      "type": "progressif",
+      "materiau": "mineral",
+      "indice": "haut",
+      "cyl": [
+        0,
+        0
+      ],
+      "honoraire": 221.35,
+      "reduit": 166.02
+    },
+    {
+      "code": "742210",
+      "categorie": 3,
+      "type": "progressif",
+      "materiau": "mineral",
+      "indice": "haut",
+      "cyl": [
+        0.25,
+        6
+      ],
+      "honoraire": 247.71,
+      "reduit": 185.79
+    },
+    {
+      "code": "742232",
+      "categorie": 3,
+      "type": "progressif",
+      "materiau": "organique",
+      "indice": "haut",
+      "cyl": [
+        0,
+        0
+      ],
+      "honoraire": 307.79,
+      "reduit": 230.85
+    },
+    {
+      "code": "742254",
+      "categorie": 3,
+      "type": "progressif",
+      "materiau": "organique",
+      "indice": "haut",
+      "cyl": [
+        0.25,
+        6
+      ],
+      "honoraire": 332.03,
+      "reduit": 249.03
+    }
+  ]
+};
+const MUTUALITES = {
+  "note": "Avantages de l'assurance complémentaire pour les lunettes. cumul_inami : true = s'ajoute à l'INAMI, false = seulement si l'INAMI ne paie rien, null = inconnu (deux scénarios affichés). periode_mois : délai entre deux avantages. HR Rail : pas d'avantage lunettes public (la complémentaire se prend dans une autre mutualité).",
+  "mutualites": [
+    {
+      "id": "mc",
+      "nom": "Mutualité chrétienne (MC, francophone)",
+      "montant_adulte": 120,
+      "montant_enfant": 120,
+      "periode_mois": 36,
+      "cumul_inami": true,
+      "partenaire_requis": null,
+      "prescription_requise": false,
+      "source_url": "https://www.mc.be/fr/avantages-remboursements/lunettes-lentilles-operation-laser",
+      "verified_on": "2026-10-27",
+      "fiabilite": "officiel"
+    },
+    {
+      "id": "cm",
+      "nom": "CM (néerlandophone)",
+      "montant_adulte": 40,
+      "montant_enfant": 50,
+      "periode_mois": 12,
+      "cumul_inami": false,
+      "partenaire_requis": null,
+      "prescription_requise": false,
+      "source_url": "https://cm.be/diensten-en-voordelen/ziekte-en-behandeling/materiaal/brillen/tegemoetkoming-ziekteverzekering",
+      "verified_on": "2026-10-27",
+      "fiabilite": "officiel"
+    },
+    {
+      "id": "partenamut",
+      "nom": "Partenamut",
+      "montant_adulte": 75,
+      "montant_enfant": 75,
+      "periode_mois": 24,
+      "cumul_inami": true,
+      "partenaire_requis": null,
+      "prescription_requise": false,
+      "source_url": "https://www.partenamut.be/fr/remboursements-avantages/optique-audition/materiel-optique",
+      "verified_on": "2026-10-27",
+      "fiabilite": "officiel"
+    },
+    {
+      "id": "helan",
+      "nom": "Helan",
+      "montant_adulte": 30,
+      "montant_enfant": 50,
+      "periode_mois": 12,
+      "palier": {
+        "min": 4.5,
+        "max": 5.75,
+        "montant_adulte": 60
+      },
+      "cumul_inami": false,
+      "partenaire_requis": null,
+      "prescription_requise": false,
+      "source_url": "https://www.helan.be/nl/ons-aanbod/ziekenfonds/voordelen-en-terugbetalingen/brillenglazen/",
+      "verified_on": "2026-10-27",
+      "fiabilite": "officiel"
+    },
+    {
+      "id": "vnz",
+      "nom": "VNZ – Vlaams & Neutraal Ziekenfonds",
+      "montant_adulte": 50,
+      "montant_enfant": 50,
+      "periode_mois": 12,
+      "avec_prescription": {
+        "montant": 100,
+        "periode_mois": 48
+      },
+      "cumul_inami": false,
+      "partenaire_requis": null,
+      "prescription_requise": false,
+      "source_url": "https://vnz.be/voordelen/terugbetaling-brillen-lenzen-oogpleisters/",
+      "verified_on": null,
+      "fiabilite": "officiel"
+    },
+    {
+      "id": "solidaris-wallonie",
+      "nom": "Solidaris Wallonie",
+      "montant_adulte": 100,
+      "montant_enfant": 75,
+      "periode_mois": 36,
+      "periode_mois_enfant": 12,
+      "cumul_inami": null,
+      "partenaire_requis": "Optique Point de Mire",
+      "prescription_requise": false,
+      "source_url": "https://www.solidaris-wallonie.be/avantages/optique-adultes/",
+      "verified_on": "2026-10-27",
+      "fiabilite": "officiel"
+    },
+    {
+      "id": "solidaris-brabant",
+      "nom": "Solidaris Brabant",
+      "montant_adulte": 60,
+      "montant_enfant": 60,
+      "periode_mois": 36,
+      "cumul_inami": null,
+      "partenaire_requis": null,
+      "prescription_requise": false,
+      "source_url": "https://www.solidaris-brabant.be/fr/avantages-services/lunettes-et-lentilles",
+      "verified_on": "2026-10-27",
+      "fiabilite": "officiel"
+    },
+    {
+      "id": "solidaris-vlaanderen",
+      "nom": "Solidaris Vlaanderen",
+      "montant_adulte": 25,
+      "montant_enfant": 25,
+      "periode_mois": 12,
+      "cumul_inami": null,
+      "partenaire_requis": null,
+      "prescription_requise": false,
+      "source_url": "https://www.solidaris-vlaanderen.be/sterkinjevoordeel-optiek-hrd",
+      "verified_on": "2026-10-27",
+      "fiabilite": "officiel"
+    },
+    {
+      "id": "liberale",
+      "nom": "Mutualité libérale / Liberale Mutualiteit",
+      "montant_adulte": 50,
+      "montant_enfant": 50,
+      "periode_mois": 12,
+      "cumul_inami": null,
+      "partenaire_requis": null,
+      "prescription_requise": false,
+      "source_url": "https://www.lm-ml.be/fr/avantages-et-services/ml-mutplusbe-remboursement-des-lunettes",
+      "verified_on": "2026-10-27",
+      "fiabilite": "officiel"
+    },
+    {
+      "id": "neutre",
+      "nom": "La Mutualité Neutre",
+      "montant_adulte": 120,
+      "montant_enfant": 120,
+      "periode_mois": 36,
+      "cumul_inami": false,
+      "partenaire_requis": null,
+      "prescription_requise": true,
+      "source_url": "https://www.lamn.be/avantages-et-services/lunettes-verres-et-lentilles",
+      "verified_on": "2026-10-27",
+      "fiabilite": "officiel"
+    },
+    {
+      "id": "mutualia",
+      "nom": "Mutualia",
+      "montant_adulte": 200,
+      "montant_enfant": 75,
+      "periode_mois": 36,
+      "periode_mois_enfant": 24,
+      "cumul_inami": null,
+      "partenaire_requis": null,
+      "prescription_requise": true,
+      "source_url": "https://www.mutualia.be/fr/nos-avantages/optique",
+      "verified_on": "2026-10-27",
+      "fiabilite": "officiel"
+    },
+    {
+      "id": "caami",
+      "nom": "CAAMI / HZIV",
+      "montant_adulte": 0,
+      "montant_enfant": 0,
+      "periode_mois": 0,
+      "cumul_inami": true,
+      "partenaire_requis": null,
+      "prescription_requise": false,
+      "source_url": "https://www.test-aankoop.be/gezond/gezondheidszorg/mutualiteiten/dossier/mutualiteit",
+      "verified_on": null,
+      "fiabilite": "fiable (pas d'assurance complémentaire)"
+    }
+  ]
+}.mutualites;
+// Simulateur INAMI + mutualité — logique de calcul pure (aucune donnée stockée).
+// Règles : article 30 de la nomenclature INAMI (version en vigueur depuis le 01/05/2024)
+// et tarif opticiens du 01/01/2026. Les montants viennent des fichiers de données, pas du code.
+// Les textes affichés existent en français (fr) et en néerlandais (nl).
+
+const arrondi = (n) => Math.round(n * 100) / 100;
+
+function fmtD(v) {
+  return v.toFixed(2).replace('.', ',') + ' D';
+}
+
+const TYPE = {
+  fr: { unifocal: 'unifocal', bifocal: 'bifocal', progressif: 'progressif' },
+  nl: { unifocal: 'enkelvoudig', bifocal: 'bifocaal', progressif: 'multifocaal' },
+};
+
+const MESSAGES = {
+  fr: {
+    cat1: (A, s) => `Correction de ${fmtD(A)} : au moins ±${fmtD(s)}, remboursé à tout âge`,
+    cat2: (age, max) => `Moins de ${age} ans : remboursé de 0,00 à ±${fmtD(max)}`,
+    cat3: (age, type, A, min) => `${age} ans ou plus, verre ${TYPE.fr[type]}, correction de ${fmtD(A)} (au moins ±${fmtD(min)})`,
+    sousSeuil: (A, s) => `Correction de ${fmtD(A)} : sous le seuil de ±${fmtD(s)} pour un adulte`,
+    seniorUnifocal: (age, min) => `À ${age} ans ou plus, le seuil de ±${fmtD(min)} ne vaut que pour un bifocal ou un progressif`,
+    sansPrescription: "Pas de prescription d'un ophtalmologue (annexe 15bis) : pas d'intervention INAMI pour les verres",
+    prescriptionPerimee: (m) => `Prescription de plus de ${m} mois : elle n'est plus valable`,
+    renouvellement: (ecoule, delai) => `Renouvellement trop tôt : ${ecoule} mois depuis la dernière paire remboursée, il en faut ${delai} (ou un changement d'au moins 0,5 D)`,
+    reduction: "Réduction de 25 % appliquée : opticien non conventionné et patient non BIM.",
+    materiauInconnu: "Matériau ou indice non précisé : le montant est celui du code le moins cher possible.",
+    enfantIndice: (oeil, min) => `${oeil} : avant 18 ans, un code à indice élevé sous ${fmtD(min)} n'est accepté que si l'autre œil y a droit. Code standard appliqué.`,
+    pasCodeMineralEnfant: "Pas de code INAMI pour des verres minéraux avant 18 ans : seuls les verres organiques sont remboursés",
+    pasCodeIndiceBas65: "Entre ±4,25 et ±5,75 D après 65 ans, l'INAMI ne rembourse que les verres à indice élevé",
+    pasCode: "Aucun code INAMI pour cette combinaison de verre",
+    aVerifier: (nom, fiab) => `Montant ${nom} : source « ${fiab} », à vérifier sur le site de la mutualité.`,
+    dixSept: "Le client a 17 ans : l'âge est calculé à la date de délivrance. Le passage à 18 ans pendant le délai de renouvellement n'a pas de règle claire.",
+    doc15bis: "Prescription de l'ophtalmologue (annexe 15bis), moins de 6 mois",
+    doc15: "Attestation de délivrance de l'opticien (annexe 15), signée par le client",
+    docMut: (nom) => `Facture ou formulaire optique demandé par ${nom}`,
+    mutInconnue: 'Mutualité inconnue',
+    choisirMut: 'Choisis la mutualité du client pour ajouter son avantage',
+    palier: (min, max) => ` (palier ${fmtD(min)} à ${fmtD(max)})`,
+    avecPrescription: " (avec prescription d'ophtalmologue)",
+    pasAvantage: "Pas d'avantage optique complémentaire",
+    partenaire: (p) => `Avantage payé seulement chez ${p}`,
+    prescriptionMut: "Cette mutualité demande une prescription d'ophtalmologue pour son avantage",
+    dejaUtilise: (p) => `Avantage déjà utilisé il y a moins de ${p} mois`,
+    avantage: (m, p, d) => `${m} € tous les ${p} mois${d}`,
+    sansCumul: "Cette mutualité ne paie que si l'INAMI ne rembourse rien",
+    siCumul: "Si l'avantage s'ajoute à l'INAMI",
+    siPasCumul: "Si l'avantage ne s'ajoute pas",
+    cumulInconnu: 'Règle de cumul inconnue pour cette mutualité',
+  },
+  nl: {
+    cat1: (A, s) => `Correctie van ${fmtD(A)}: minstens ±${fmtD(s)}, terugbetaald op elke leeftijd`,
+    cat2: (age, max) => `Jonger dan ${age} jaar: terugbetaald van 0,00 tot ±${fmtD(max)}`,
+    cat3: (age, type, A, min) => `${age} jaar of ouder, ${TYPE.nl[type]} glas, correctie van ${fmtD(A)} (minstens ±${fmtD(min)})`,
+    sousSeuil: (A, s) => `Correctie van ${fmtD(A)}: onder de drempel van ±${fmtD(s)} voor een volwassene`,
+    seniorUnifocal: (age, min) => `Vanaf ${age} jaar geldt de drempel van ±${fmtD(min)} alleen voor bifocale of multifocale glazen`,
+    sansPrescription: 'Geen voorschrift van een oogarts (bijlage 15bis): geen RIZIV-tegemoetkoming voor de glazen',
+    prescriptionPerimee: (m) => `Voorschrift ouder dan ${m} maanden: het is niet meer geldig`,
+    renouvellement: (ecoule, delai) => `Te vroeg voor hernieuwing: ${ecoule} maanden sinds de laatste terugbetaalde bril, er zijn er ${delai} nodig (of een wijziging van minstens 0,5 D)`,
+    reduction: 'Vermindering van 25 % toegepast: opticien zonder conventie en patiënt zonder verhoogde tegemoetkoming.',
+    materiauInconnu: 'Materiaal of index niet ingevuld: het bedrag is dat van de goedkoopst mogelijke code.',
+    enfantIndice: (oeil, min) => `${oeil}: vóór 18 jaar wordt een code met hoge index onder ${fmtD(min)} alleen aanvaard als het andere oog er recht op heeft. Standaardcode toegepast.`,
+    pasCodeMineralEnfant: 'Geen RIZIV-code voor minerale glazen vóór 18 jaar: alleen organische glazen worden terugbetaald',
+    pasCodeIndiceBas65: 'Tussen ±4,25 en ±5,75 D na 65 jaar betaalt het RIZIV alleen glazen met hoge index terug',
+    pasCode: 'Geen RIZIV-code voor deze combinatie van glas',
+    aVerifier: (nom, fiab) => `Bedrag ${nom}: bron « ${fiab} », na te kijken op de website van het ziekenfonds.`,
+    dixSept: 'De klant is 17 jaar: de leeftijd wordt berekend op de datum van aflevering. Voor de overgang naar 18 jaar tijdens de hernieuwingstermijn bestaat geen duidelijke regel.',
+    doc15bis: 'Voorschrift van de oogarts (bijlage 15bis), minder dan 6 maanden oud',
+    doc15: 'Afleveringsattest van de opticien (bijlage 15), ondertekend door de klant',
+    docMut: (nom) => `Factuur of optiekformulier gevraagd door ${nom}`,
+    mutInconnue: 'Ziekenfonds onbekend',
+    choisirMut: 'Kies het ziekenfonds van de klant om het voordeel toe te voegen',
+    palier: (min, max) => ` (schijf ${fmtD(min)} tot ${fmtD(max)})`,
+    avecPrescription: ' (met voorschrift van een oogarts)',
+    pasAvantage: 'Geen aanvullend optiekvoordeel',
+    partenaire: (p) => `Voordeel alleen bij ${p}`,
+    prescriptionMut: 'Dit ziekenfonds vraagt een voorschrift van een oogarts voor het voordeel',
+    dejaUtilise: (p) => `Voordeel minder dan ${p} maanden geleden al gebruikt`,
+    avantage: (m, p, d) => `${m} € om de ${p} maanden${d}`,
+    sansCumul: 'Dit ziekenfonds betaalt alleen als het RIZIV niets terugbetaalt',
+    siCumul: 'Als het voordeel bovenop het RIZIV komt',
+    siPasCumul: 'Als het voordeel niet bovenop het RIZIV komt',
+    cumulInconnu: 'Cumulregel onbekend voor dit ziekenfonds',
+  },
+};
+
+/** Âge en années révolues à une date donnée. */
+function ageA(dateNaissance, date) {
+  const n = new Date(dateNaissance);
+  const d = new Date(date);
+  let age = d.getFullYear() - n.getFullYear();
+  const pasEncore =
+    d.getMonth() < n.getMonth() ||
+    (d.getMonth() === n.getMonth() && d.getDate() < n.getDate());
+  if (pasEncore) age -= 1;
+  return age;
+}
+
+/** Nombre de mois complets écoulés entre deux dates. */
+function moisEntre(debut, fin) {
+  const a = new Date(debut);
+  const b = new Date(fin);
+  let mois = (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+  if (b.getDate() < a.getDate()) mois -= 1;
+  return mois;
+}
+
+/** Amétropie maximale : méridien le plus fort, vision de loin. */
+function ametropieMax(sph, cyl = 0) {
+  return Math.max(Math.abs(sph), Math.abs(sph + cyl));
+}
+
+/**
+ * Catégorie INAMI d'un verre (article 30) :
+ * 1 = tous âges dès ±6,00 D ; 2 = moins de 18 ans de 0,00 à ±5,75 D ;
+ * 3 = 65 ans et plus, bifocal/progressif, de ±4,25 à ±5,75 D ; null = pas d'intervention.
+ */
+function categorieVerre({ sph, cyl = 0 }, age, typeVerre, inami, lang = 'fr') {
+  const T = MESSAGES[lang];
+  const s = inami.seuils;
+  const A = ametropieMax(sph, cyl);
+  if (A >= s.tous_ages) return { categorie: 1, A, raison: T.cat1(A, s.tous_ages) };
+  if (age < s.age_enfant_max) return { categorie: 2, A, raison: T.cat2(s.age_enfant_max, s.enfant_max) };
+  if (age >= s.age_senior_min && typeVerre !== 'unifocal' && A >= s.senior_min) {
+    return { categorie: 3, A, raison: T.cat3(s.age_senior_min, typeVerre, A, s.senior_min) };
+  }
+  let raison = T.sousSeuil(A, s.tous_ages);
+  if (age >= s.age_senior_min && typeVerre === 'unifocal' && A >= s.senior_min) {
+    raison = T.seniorUnifocal(s.age_senior_min, s.senior_min);
+  }
+  return { categorie: null, A, raison };
+}
+
+/** Indice « haut » ou « bas » au sens de l'article 30, ou null si on ne peut pas trancher. */
+function classeIndice(materiau, indice, categorie, typeVerre, inami) {
+  if (indice == null) return null;
+  const e = inami.indice_eleve;
+  if (!materiau) {
+    if (indice >= Math.max(e.organique, e.mineral)) return 'haut';
+    if (indice < Math.min(e.organique, e.mineral_bifocal_65)) return 'bas';
+    return null;
+  }
+  let seuil = materiau === 'mineral' ? e.mineral : e.organique;
+  if (materiau === 'mineral' && categorie === 3 && typeVerre === 'bifocal') seuil = e.mineral_bifocal_65;
+  return indice >= seuil ? 'haut' : 'bas';
+}
+
+/** Code INAMI le moins cher compatible avec la catégorie, le type, le matériau, l'indice et le cylindre. */
+function choisirCode(inami, categorie, typeVerre, materiau, classe, cyl) {
+  const c = Math.min(Math.abs(cyl), inami.supplement_cylindre.seuil);
+  const candidats = inami.codes.filter((k) => {
+    if (k.categorie !== categorie || k.type !== typeVerre) return false;
+    if (materiau && k.materiau !== materiau) return false;
+    if (classe) {
+      const strict = categorie === 2 && classe === 'haut';
+      if (!(k.indice === classe || (k.indice === 'tous' && !strict))) return false;
+    }
+    const [lo, hi] = k.cyl;
+    return c === 0 ? hi === 0 : lo > 0 && c >= lo && c <= hi;
+  });
+  if (!candidats.length) return null;
+  return candidats.reduce((a, b) => (b.honoraire < a.honoraire ? b : a));
+}
+
+function raisonSansCode(categorie, materiau, classe, T) {
+  if (categorie === 2 && materiau === 'mineral') return T.pasCodeMineralEnfant;
+  if (categorie === 3 && classe === 'bas') return T.pasCodeIndiceBas65;
+  return T.pasCode;
+}
+
+/**
+ * Calcul complet. Entrée :
+ * { dateNaissance, dateDelivrance, typeVerre, yeux: { od: {sph,cyl}|null, og: {sph,cyl}|null },
+ *   prescriptionOphtalmo, datePrescription, derniereDelivrance, changement05,
+ *   materiau ('organique'|'mineral'|null), indice (nombre|null), conventionne, bim, avecMonture, montureInterventions, mutualiteId, dernierAvantage,
+ *   achatPartenaire, prixVerres, prixMonture }
+ * lang : 'fr' ou 'nl' (langue des textes renvoyés).
+ */
+function simuler(entree, inami, mutualites, lang = 'fr') {
+  const T = MESSAGES[lang] || MESSAGES.fr;
+  const avertissements = [];
+  const age = ageA(entree.dateNaissance, entree.dateDelivrance);
+  const enfant = age < inami.seuils.age_enfant_max;
+
+  // 1. Conditions générales du droit INAMI
+  const motifsSansInami = [];
+  if (!entree.prescriptionOphtalmo) {
+    motifsSansInami.push(T.sansPrescription);
+  } else if (entree.datePrescription) {
+    const m = moisEntre(entree.datePrescription, entree.dateDelivrance);
+    if (m >= inami.prescription_validite_mois) motifsSansInami.push(T.prescriptionPerimee(inami.prescription_validite_mois));
+  }
+  if (entree.derniereDelivrance) {
+    const delai = enfant ? inami.renouvellement.mois_enfant : inami.renouvellement.mois_adulte;
+    const ecoule = moisEntre(entree.derniereDelivrance, entree.dateDelivrance);
+    if (ecoule < delai && !entree.changement05) motifsSansInami.push(T.renouvellement(ecoule, delai));
+  }
+
+  // 2. Verres, œil par œil : catégorie puis code INAMI selon matériau, indice et cylindre
+  const reduire = !entree.conventionne && !(inami.reduction_non_conventionne.exception_bim && entree.bim);
+  const cats = {};
+  let AMax = 0;
+  for (const cote of ['od', 'og']) {
+    const oeil = entree.yeux?.[cote];
+    if (!oeil) continue;
+    cats[cote] = categorieVerre(oeil, age, entree.typeVerre, inami, lang);
+    AMax = Math.max(AMax, cats[cote].A);
+  }
+  if (!entree.materiau || entree.indice == null) avertissements.push(T.materiauInconnu);
+
+  const yeux = {};
+  let totalVerres = 0;
+  let totalSupplements = 0;
+  let reduction = 0;
+  for (const cote of Object.keys(cats)) {
+    const oeil = entree.yeux[cote];
+    const cat = cats[cote];
+    const res = { ...cat, eligible: false, montant: 0, supplement: 0, code: null, codeSupplement: null };
+    if (cat.categorie && motifsSansInami.length === 0) {
+      let classe = classeIndice(entree.materiau, entree.indice, cat.categorie, entree.typeVerre, inami);
+      if (cat.categorie === 2 && classe === 'haut') {
+        const autre = cats[cote === 'od' ? 'og' : 'od'];
+        const min = inami.enfant_indice_eleve_min_dioptrie;
+        const ok = cat.A >= min || (autre && (autre.A >= min || autre.categorie === 1));
+        if (!ok) { classe = 'bas'; avertissements.push(T.enfantIndice(cote.toUpperCase(), min)); }
+      }
+      const code = choisirCode(inami, cat.categorie, entree.typeVerre, entree.materiau, classe, oeil.cyl || 0);
+      if (code) {
+        res.eligible = true;
+        res.code = code.code;
+        res.montant = code.honoraire;
+        if (reduire) reduction += code.honoraire - code.reduit;
+        if (Math.abs(oeil.cyl || 0) > inami.supplement_cylindre.seuil) {
+          const sup = inami.supplement_cylindre.par_categorie[String(cat.categorie)];
+          res.supplement = sup.honoraire;
+          res.codeSupplement = sup.code;
+          if (reduire) reduction += sup.honoraire - sup.reduit;
+        }
+      } else {
+        res.raison = raisonSansCode(cat.categorie, entree.materiau, classe, T);
+      }
+    } else if (cat.categorie) {
+      res.raison = motifsSansInami[0];
+    }
+    totalVerres += res.montant;
+    totalSupplements += res.supplement;
+    yeux[cote] = res;
+  }
+
+  // 3. Monture : seulement avant 18 ans, deux interventions au maximum,
+  //    et la première seulement avec au moins un verre remboursé
+  let monture = 0;
+  const m = inami.monture_enfant;
+  const dejaMontures = entree.montureInterventions || 0;
+  const premiereOk = !(m.premiere_avec_verre && dejaMontures === 0 && totalVerres === 0);
+  if (enfant && entree.avecMonture !== false && premiereOk && dejaMontures < m.max_interventions) {
+    monture = m.honoraire;
+    if (reduire) reduction += m.honoraire - m.reduit;
+  }
+
+  // 4. Opticien non conventionné et patient non BIM : colonne à 75 % du tarif
+  const brut = totalVerres + totalSupplements + monture;
+  reduction = arrondi(reduction);
+  if (reduction > 0) avertissements.push(T.reduction);
+  const totalInami = arrondi(brut - reduction);
+
+  // 5. Mutualité
+  const mut = mutualites.find((m) => m.id === entree.mutualiteId) || null;
+  const mutualite = calculMutualite(mut, { enfant, AMax, totalInami, entree, T });
+  if (mut && mut.fiabilite !== 'officiel' && !mut.fiabilite.startsWith('fiable')) {
+    avertissements.push(T.aVerifier(mut.nom, mut.fiabilite));
+  }
+  if (enfant && age === inami.seuils.age_enfant_max - 1) avertissements.push(T.dixSept);
+
+  // 6. Reste à charge
+  const prix = (entree.prixVerres || 0) + (entree.prixMonture || 0);
+  const scenarios = mutualite.scenarios.map((s) => {
+    const montantMut = prix > 0 ? Math.min(s.montant, Math.max(0, prix - totalInami)) : s.montant;
+    return {
+      ...s,
+      montant: arrondi(montantMut),
+      totalRembourse: arrondi(totalInami + montantMut),
+      reste: prix > 0 ? arrondi(Math.max(0, prix - totalInami - montantMut)) : null,
+    };
+  });
+
+  const documents = [];
+  if (totalInami > 0) documents.push(T.doc15bis, T.doc15);
+  if (mut && scenarios.some((s) => s.montant > 0)) documents.push(T.docMut(mut.nom));
+
+  return {
+    age,
+    motifsSansInami,
+    yeux,
+    inami: {
+      verres: arrondi(totalVerres),
+      supplements: arrondi(totalSupplements),
+      monture,
+      reduction,
+      total: totalInami,
+    },
+    mutualite: { nom: mut?.nom ?? null, fiabilite: mut?.fiabilite ?? null, source: mut?.source_url ?? null, scenarios },
+    prix: prix > 0 ? prix : null,
+    avertissements,
+    documents,
+  };
+}
+
+function calculMutualite(mut, { enfant, AMax, totalInami, entree, T }) {
+  if (!mut) return { scenarios: [{ label: T.mutInconnue, montant: 0, raison: T.choisirMut }] };
+
+  let montant = enfant ? mut.montant_enfant : mut.montant_adulte;
+  let periode = enfant && mut.periode_mois_enfant ? mut.periode_mois_enfant : mut.periode_mois;
+  let detail = '';
+  if (!enfant && mut.palier && AMax >= mut.palier.min && AMax <= mut.palier.max) {
+    montant = mut.palier.montant_adulte;
+    detail = T.palier(mut.palier.min, mut.palier.max);
+  }
+  if (mut.avec_prescription && entree.prescriptionOphtalmo) {
+    montant = mut.avec_prescription.montant;
+    periode = mut.avec_prescription.periode_mois;
+    detail = T.avecPrescription;
+  }
+
+  if (montant === 0) return { scenarios: [{ label: mut.nom, montant: 0, raison: T.pasAvantage }] };
+  if (mut.partenaire_requis && !entree.achatPartenaire) {
+    return { scenarios: [{ label: mut.nom, montant: 0, raison: T.partenaire(mut.partenaire_requis) }] };
+  }
+  if (mut.prescription_requise && !entree.prescriptionOphtalmo) {
+    return { scenarios: [{ label: mut.nom, montant: 0, raison: T.prescriptionMut }] };
+  }
+  if (entree.dernierAvantage && periode > 0 && moisEntre(entree.dernierAvantage, entree.dateDelivrance) < periode) {
+    return { scenarios: [{ label: mut.nom, montant: 0, raison: T.dejaUtilise(periode) }] };
+  }
+
+  const raisonOk = T.avantage(montant, periode, detail);
+  if (mut.cumul_inami === true || totalInami === 0) {
+    return { scenarios: [{ label: mut.nom, montant, raison: raisonOk }] };
+  }
+  if (mut.cumul_inami === false) {
+    return { scenarios: [{ label: mut.nom, montant: 0, raison: T.sansCumul }] };
+  }
+  return {
+    scenarios: [
+      { label: T.siCumul, montant, raison: raisonOk },
+      { label: T.siPasCumul, montant: 0, raison: T.cumulInconnu },
+    ],
+  };
+}
+
+
+const UI = {
+  fr: {
+    titre: 'Simulateur INAMI optique',
+    sous: "Remboursement INAMI et mutualité d'une paire de lunettes, calculé au comptoir. Rien n'est enregistré.",
+    exemple: "Dossier d'exemple", btnExemple: 'Exemple', btnReset: 'Nouveau client',
+    lgClient: 'Client', naissance: 'Date de naissance', delivrance: 'Date de délivrance',
+    bim: 'Statut BIM (intervention majorée)', conv: 'Opticien conventionné',
+    lgCorrection: 'Correction de loin', uni: 'Unifocal', bi: 'Bifocal', prog: 'Progressif', sph: 'Sphère', cyl: 'Cylindre',
+    hintRx: 'Laisse une ligne vide pour un seul verre. Bifocal et progressif : valeurs de loin.',
+    materiau: 'Matériau', indice: 'Indice', nsp: 'Je ne sais pas', nsp2: 'Je ne sais pas', organique: 'Organique', mineral: 'Minéral', codeInami: 'code',
+    lgPrescription: 'Prescription et renouvellement', presc: "Prescription d'un ophtalmologue (annexe 15bis)",
+    datePresc: 'Date de la prescription', dernierePaire: 'Dernière paire remboursée (si connue)',
+    changement: "Correction changée d'au moins 0,5 D depuis",
+    lgMut: 'Mutualité', mutClient: 'Mutualité du client', dernierAvantage: 'Dernier avantage optique reçu (si connu)',
+    lgPrix: 'Prix et monture', prixVerres: 'Prix des verres (€)', prixMonture: 'Prix de la monture (€)',
+    nouvelleMonture: 'Nouvelle monture', montures: 'Montures déjà remboursées (moins de 18 ans)',
+    hReste: 'Reste à payer', hVerres: 'Verres', hDetail: 'Détail du remboursement', hDocs: 'Documents à remettre',
+    jeNeSaisPas: 'Je ne sais pas', achatChez: (p) => `Achat chez ${p}`,
+    attenteDates: 'Entre la date de naissance et la date de délivrance pour lancer le calcul.',
+    attenteRx: 'Entre au moins une correction (sphère ou cylindre).',
+    clientPaie: 'Le client paie', sur: (p, r) => `sur ${p} · remboursé ${r}`,
+    totalRembourse: 'Total remboursé', entrePrix: 'Entre le prix pour voir le reste à payer.',
+    rembourse: (m) => `Remboursé ${m}`, pasIntervention: "Pas d'intervention", suppInclus: ' · supplément cylindre inclus',
+    meridien: 'Méridien le plus fort', categorie: 'catégorie',
+    lVerres: 'Verres (INAMI)', lSupp: 'Supplément cylindre > 6 D', lMonture: 'Monture enfant', lReduction: 'Réduction non conventionné', lTotal: 'Total INAMI',
+    avantageMut: 'Avantage mutualité', source: "Source de l'avantage",
+    datePrescManquante: "Date de prescription non renseignée : vérifie qu'elle a moins de 6 mois.",
+    aucunDoc: 'Aucun document de remboursement nécessaire',
+    disclaimer: (v) => `Estimation indicative, non contractuelle. Le remboursement final est décidé par la mutualité. Outil indépendant, non affilié à l'INAMI, à une mutualité ou à une enseigne. Tarifs : fichier INAMI du 01/01/2026${v ? ', vérifiés le ' + v : ' (vérification officielle en cours)'}.`,
+    locale: 'fr-BE',
+  },
+  nl: {
+    titre: 'RIZIV-simulator optiek',
+    sous: 'Terugbetaling door het RIZIV en het ziekenfonds voor een bril, berekend aan de toonbank. Er wordt niets bewaard.',
+    exemple: 'Voorbeelddossier', btnExemple: 'Voorbeeld', btnReset: 'Nieuwe klant',
+    lgClient: 'Klant', naissance: 'Geboortedatum', delivrance: 'Datum van aflevering',
+    bim: 'Verhoogde tegemoetkoming (VT)', conv: 'Opticien met conventie',
+    lgCorrection: 'Correctie veraf', uni: 'Enkelvoudig', bi: 'Bifocaal', prog: 'Multifocaal', sph: 'Sfeer', cyl: 'Cilinder',
+    hintRx: 'Laat een regel leeg voor één glas. Bifocaal en multifocaal: waarden voor veraf.',
+    materiau: 'Materiaal', indice: 'Index', nsp: 'Weet ik niet', nsp2: 'Weet ik niet', organique: 'Organisch', mineral: 'Mineraal', codeInami: 'code',
+    lgPrescription: 'Voorschrift en hernieuwing', presc: 'Voorschrift van een oogarts (bijlage 15bis)',
+    datePresc: 'Datum van het voorschrift', dernierePaire: 'Laatste terugbetaalde bril (indien gekend)',
+    changement: 'Correctie sindsdien minstens 0,5 D gewijzigd',
+    lgMut: 'Ziekenfonds', mutClient: 'Ziekenfonds van de klant', dernierAvantage: 'Laatste optiekvoordeel ontvangen (indien gekend)',
+    lgPrix: 'Prijs en montuur', prixVerres: 'Prijs van de glazen (€)', prixMonture: 'Prijs van het montuur (€)',
+    nouvelleMonture: 'Nieuw montuur', montures: 'Al terugbetaalde monturen (jonger dan 18)',
+    hReste: 'Te betalen', hVerres: 'Glazen', hDetail: 'Detail van de terugbetaling', hDocs: 'Mee te geven documenten',
+    jeNeSaisPas: 'Weet ik niet', achatChez: (p) => `Aankoop bij ${p}`,
+    attenteDates: 'Vul de geboortedatum en de datum van aflevering in om te berekenen.',
+    attenteRx: 'Vul minstens één correctie in (sfeer of cilinder).',
+    clientPaie: 'De klant betaalt', sur: (p, r) => `op ${p} · terugbetaald ${r}`,
+    totalRembourse: 'Totaal terugbetaald', entrePrix: 'Vul de prijs in om te zien wat de klant betaalt.',
+    rembourse: (m) => `Terugbetaald ${m}`, pasIntervention: 'Geen tegemoetkoming', suppInclus: ' · supplement cilinder inbegrepen',
+    meridien: 'Sterkste meridiaan', categorie: 'categorie',
+    lVerres: 'Glazen (RIZIV)', lSupp: 'Supplement cilinder > 6 D', lMonture: 'Montuur kind', lReduction: 'Vermindering zonder conventie', lTotal: 'Totaal RIZIV',
+    avantageMut: 'Voordeel ziekenfonds', source: 'Bron van het voordeel',
+    datePrescManquante: 'Datum van het voorschrift niet ingevuld: controleer of het minder dan 6 maanden oud is.',
+    aucunDoc: 'Geen documenten nodig voor terugbetaling',
+    disclaimer: (v) => `Indicatieve, niet-bindende schatting. Het ziekenfonds beslist over de uiteindelijke terugbetaling. Onafhankelijke tool, niet verbonden aan het RIZIV, een ziekenfonds of een keten. Tarieven: RIZIV-bestand van 01/01/2026${v ? ', nagekeken op ' + v : ' (officiële controle lopende)'}.`,
+    locale: 'nl-BE',
+  },
+};
+
+const $ = (id) => document.getElementById(id);
+let lang = 'fr';
+try { const l = localStorage.getItem('lang'); if (l === 'nl' || l === 'fr') lang = l; } catch (e) {}
+const U = () => UI[lang];
+const euro = (n) => n.toLocaleString(U().locale, { style: 'currency', currency: 'EUR' });
+const iso = (d) => d.toISOString().slice(0, 10);
+const today = new Date();
+const ilYa = (mois) => { const d = new Date(today); d.setMonth(d.getMonth() - mois); return iso(d); };
+const sel = $('mutualiteId');
+
+function appliquerLangue() {
+  document.documentElement.lang = lang;
+  document.title = U().titre;
+  document.querySelectorAll('[data-i18n]').forEach((el) => { const t = U()[el.dataset.i18n]; if (typeof t === 'string') el.textContent = t; });
+  const v = sel.value;
+  sel.innerHTML = `<option value="">${U().jeNeSaisPas}</option>` + MUTUALITES.map((m) => `<option value="${m.id}">${m.nom}</option>`).join('');
+  sel.value = v;
+  $(lang === 'nl' ? 'langNl' : 'langFr').checked = true;
+  majPartenaire();
+  calculer();
+}
+
+const EXEMPLE = {
+  dateNaissance: '1979-04-12', dateDelivrance: iso(today), typeVerre: 'progressif',
+  materiau: 'organique', indice: '1.6',
+  odSph: '-5.00', odCyl: '-1.25', ogSph: '-4.50', ogCyl: '-0.75',
+  prescriptionOphtalmo: true, datePrescription: ilYa(1), derniereDelivrance: '', changement05: false,
+  conventionne: true, bim: false, mutualiteId: 'mc', dernierAvantage: '', achatPartenaire: false,
+  prixVerres: '520', prixMonture: '140', avecMonture: true, montureInterventions: '0',
+};
+const VIDE = {
+  dateNaissance: '', dateDelivrance: iso(today), typeVerre: 'unifocal',
+  materiau: '', indice: '',
+  odSph: '', odCyl: '', ogSph: '', ogCyl: '',
+  prescriptionOphtalmo: true, datePrescription: '', derniereDelivrance: '', changement05: false,
+  conventionne: true, bim: false, mutualiteId: '', dernierAvantage: '', achatPartenaire: false,
+  prixVerres: '', prixMonture: '', avecMonture: true, montureInterventions: '0',
+};
+
+function remplir(v) {
+  for (const [k, val] of Object.entries(v)) {
+    if (k === 'typeVerre') { document.querySelector(`input[name="typeVerre"][value="${val}"]`).checked = true; continue; }
+    const el = $(k);
+    if (el.type === 'checkbox') el.checked = val; else el.value = val;
+  }
+  majPartenaire();
+  calculer();
+}
+
+function lire() {
+  const num = (id) => { const v = $(id).value; return v === '' ? null : Number(v); };
+  const oeil = (s, c) => (num(s) === null && num(c) === null ? null : { sph: num(s) || 0, cyl: num(c) || 0 });
+  return {
+    dateNaissance: $('dateNaissance').value,
+    dateDelivrance: $('dateDelivrance').value,
+    typeVerre: document.querySelector('input[name="typeVerre"]:checked').value,
+    materiau: $('materiau').value || null,
+    indice: $('indice').value === '' ? null : Number($('indice').value),
+    yeux: { od: oeil('odSph', 'odCyl'), og: oeil('ogSph', 'ogCyl') },
+    prescriptionOphtalmo: $('prescriptionOphtalmo').checked,
+    datePrescription: $('datePrescription').value || null,
+    derniereDelivrance: $('derniereDelivrance').value || null,
+    changement05: $('changement05').checked,
+    conventionne: $('conventionne').checked,
+    bim: $('bim').checked,
+    avecMonture: $('avecMonture').checked,
+    montureInterventions: Number($('montureInterventions').value),
+    mutualiteId: $('mutualiteId').value || null,
+    dernierAvantage: $('dernierAvantage').value || null,
+    achatPartenaire: $('achatPartenaire').checked,
+    prixVerres: num('prixVerres') || 0,
+    prixMonture: num('prixMonture') || 0,
+  };
+}
+
+function majPartenaire() {
+  const m = MUTUALITES.find((x) => x.id === sel.value);
+  $('partenaireRow').hidden = !(m && m.partenaire_requis);
+  if (m && m.partenaire_requis) $('partenaireLabel').textContent = U().achatChez(m.partenaire_requis);
+}
+
+function vide(msg) {
+  $('totaux').innerHTML = `<p class="hint">${msg}</p>`;
+  for (const id of ['yeux', 'detail', 'mutualite', 'documents']) $(id).innerHTML = '';
+  $('avertissements').hidden = true;
+}
+
+function calculer() {
+  const t = U();
+  const e = lire();
+  $('disclaimer').textContent = t.disclaimer(INAMI.verified_on);
+  if (!e.dateNaissance || !e.dateDelivrance) return vide(t.attenteDates);
+  if (!e.yeux.od && !e.yeux.og) return vide(t.attenteRx);
+
+  const r = simuler(e, INAMI, MUTUALITES, lang);
+  const sc = r.mutualite.scenarios;
+
+  if (r.prix) {
+    $('totaux').innerHTML = sc.map((s) => `<div class="total">
+        <span class="label">${sc.length > 1 ? s.label : t.clientPaie}</span>
+        <span class="big">${euro(s.reste)}</span>
+        <span class="label">${t.sur(euro(r.prix), euro(s.totalRembourse))}</span></div>`).join('');
+  } else {
+    $('totaux').innerHTML = sc.map((s) => `<div class="total">
+        <span class="label">${sc.length > 1 ? s.label + ' · ' + t.totalRembourse.toLowerCase() : t.totalRembourse}</span>
+        <span class="big">${euro(s.totalRembourse)}</span></div>`).join('') + `<p class="hint">${t.entrePrix}</p>`;
+  }
+
+  $('yeux').innerHTML = Object.entries(r.yeux).map(([cote, y]) => `
+    <div class="eye ${y.eligible ? 'ok' : 'no'}">
+      <span class="tag">${cote.toUpperCase()} · ${y.eligible ? t.rembourse(euro(y.montant + y.supplement)) : t.pasIntervention}</span>
+      <p>${y.raison}${y.supplement ? t.suppInclus : ''}</p>
+      <p class="hint">${t.meridien} : ${fmtD(y.A)}${y.categorie ? ' · ' + t.categorie + ' ' + y.categorie + '°' : ''}${y.code ? ' · ' + t.codeInami + ' ' + y.code : ''}${y.codeSupplement ? ' + ' + y.codeSupplement : ''}</p>
+    </div>`).join('');
+
+  const l = [
+    [t.lVerres, r.inami.verres],
+    r.inami.supplements ? [t.lSupp, r.inami.supplements] : null,
+    r.inami.monture ? [t.lMonture, r.inami.monture] : null,
+    r.inami.reduction ? [t.lReduction, -r.inami.reduction] : null,
+  ].filter(Boolean);
+  $('detail').innerHTML = l.map(([k, v]) => `<div><dt>${k}</dt><dd>${euro(v)}</dd></div>`).join('') +
+    `<div class="sum"><dt>${t.lTotal}</dt><dd>${euro(r.inami.total)}</dd></div>`;
+
+  const f = r.mutualite.fiabilite;
+  const pill = f ? `<span class="pill ${/^(officiel|fiable)/.test(f) && !/non daté/.test(f) ? '' : 'verify'}">${f}</span>` : '';
+  $('mutualite').innerHTML = (r.mutualite.nom ? `<p class="mutname">${r.mutualite.nom} ${pill}</p>` : '') +
+    sc.map((s) => `<div class="scen"><strong>${sc.length > 1 ? s.label : t.avantageMut} : ${euro(s.montant)}</strong><small>${s.raison}</small></div>`).join('') +
+    (r.mutualite.source ? `<p class="hint"><a href="${r.mutualite.source}" target="_blank" rel="noopener">${t.source}</a></p>` : '');
+
+  const av = [...r.avertissements];
+  if (!e.datePrescription && e.prescriptionOphtalmo) av.unshift(t.datePrescManquante);
+  $('avertissements').hidden = av.length === 0;
+  $('avertissements').innerHTML = av.map((a) => `<p>${a}</p>`).join('');
+
+  $('documents').innerHTML = (r.documents.length ? r.documents : [t.aucunDoc]).map((d) => `<li>${d}</li>`).join('');
+}
+
+let exemple = true;
+$('form').addEventListener('input', () => { if (exemple) { exemple = false; $('exampleFlag').hidden = true; } majPartenaire(); calculer(); });
+$('form').addEventListener('submit', (ev) => ev.preventDefault());
+document.querySelectorAll('input[name="lang"]').forEach((el) => el.addEventListener('change', () => {
+  lang = el.value;
+  try { localStorage.setItem('lang', lang); } catch (e) {}
+  appliquerLangue();
+}));
+$('btnReset').addEventListener('click', () => { exemple = false; $('exampleFlag').hidden = true; remplir(VIDE); });
+$('btnExemple').addEventListener('click', () => { remplir(EXEMPLE); exemple = true; $('exampleFlag').hidden = false; });
+remplir(EXEMPLE);
+appliquerLangue();
+</script>
+
